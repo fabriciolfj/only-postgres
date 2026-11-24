@@ -54,5 +54,13 @@ services:
     volumes:
       - ./migrations/brewery:/flyway/sql:ro
 
+  flyway-customers:
+    <<: *flyway
+    environment:
+      <<: *flyway-env
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/customers
+    volumes:
+      - ./migrations/customers:/flyway/sql:ro
+
 volumes:
   pgdata:

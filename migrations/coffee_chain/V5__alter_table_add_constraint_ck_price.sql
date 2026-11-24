@@ -1,0 +1,1 @@
+alter table products.catalog add constraint catalog_price_check CHECK ( price > 0 );
