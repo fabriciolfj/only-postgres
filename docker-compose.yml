@@ -1,0 +1,58 @@
+x-flyway: &flyway
+  image: flyway/flyway:11.20.3
+  depends_on:
+    postgres:
+      condition: service_healthy
+  environment: &flyway-env
+    FLYWAY_USER: ${POSTGRES_USER:-postgres}
+    FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    FLYWAY_LOCATIONS: filesystem:/flyway/sql
+    FLYWAY_CONNECT_RETRIES: 10
+  command: migrate
+
+services:
+  postgres:
+    image: postgres:17.2
+    container_name: only-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Um serviço Flyway por banco: cada um lê seu próprio diretório de migrations.
+  flyway-postgres:
+    <<: *flyway
+    environment:
+      <<: *flyway-env
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/postgres
+    volumes:
+      - ./migrations/postgres:/flyway/sql:ro
+
+  flyway-coffee-chain:
+    <<: *flyway
+    environment:
+      <<: *flyway-env
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/coffee_chain
+    volumes:
+      - ./migrations/coffee_chain:/flyway/sql:ro
+
+  flyway-brewery:
+    <<: *flyway
+    environment:
+      <<: *flyway-env
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/brewery
+    volumes:
+      - ./migrations/brewery:/flyway/sql:ro
+
+volumes:
+  pgdata:
